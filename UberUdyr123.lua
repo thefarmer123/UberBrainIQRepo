@@ -2024,7 +2024,7 @@ class "__gsoUdyr"
             __gsoLoader()
             self.lastReset = 0
             gsoSDK.Orbwalker:SetSpellMoveDelays( { q = 0, w = 0, e = 0, r = 0 } )
-            gsoSDK.Orbwalker:SetSpellAttackDelays( { q = 0, w = 0, e = 0, r = 0 } )
+            gsoSDK.Orbwalker:SetSpellAttackDelays( { q = 0.09, w = 0.09, e = 0.09, r = 0.09 } )
             self:CreateMenu()
             self:AddTickEvent()
       end
@@ -2091,8 +2091,9 @@ class "__gsoUdyr"
 	end
 	if mode == "Clear" then
 		if gsoSDK.TS:GetLaneClearTarget() and gsoSDK.Spell:IsReady(_E, { q = 0, w = 0, e = 0, r = 0 } ) and not (QCount == 3 or WCount == 3) then
-			if (gsoSDK.TS:GetLaneClearTarget().name:lower() == "sru_crab16.1.1" or gsoSDK.TS:GetLaneClearTarget().name:lower() == "sru_crab15.1.1")then
+			if string.find(gsoSDK.TS:GetLaneClearTarget().name:lower(), "crab")then
 				if gsoSDK.Spell:CastSpell(HK_E) then
+					currentStance = 0
 					return
 				end
 			end
@@ -2116,8 +2117,6 @@ class "__gsoUdyr"
 			end
 		end
 	end
-
-    
 	end
 end
 
