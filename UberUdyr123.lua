@@ -2024,7 +2024,7 @@ class "__gsoUdyr"
             __gsoLoader()
             self.lastReset = 0
             gsoSDK.Orbwalker:SetSpellMoveDelays( { q = 0, w = 0, e = 0, r = 0 } )
-            gsoSDK.Orbwalker:SetSpellAttackDelays( { q = 0.09, w = 0.09, e = 0.09, r = 0.09 } )
+            gsoSDK.Orbwalker:SetSpellAttackDelays( { q = 0, w = 0, e = 0, r = 0 } )
             self:CreateMenu()
             self:AddTickEvent()
       end
