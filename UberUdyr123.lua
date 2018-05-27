@@ -46,6 +46,7 @@ local currentStance = 0
 local QCount = 0
 local WCount = 0
 local RCount = 0
+local HKITEM = {[ITEM_1] = HK_ITEM_1,[ITEM_2] = HK_ITEM_2,[ITEM_3] = HK_ITEM_3,[ITEM_4] = HK_ITEM_4,[ITEM_5] = HK_ITEM_5,[ITEM_6] = HK_ITEM_6,[ITEM_7] = HK_ITEM_7}
 local function GetFastDistance(p1, p2)
       local x = p1.x - p2.x
       local z = p1.z - p2.z
@@ -1781,6 +1782,13 @@ class "__gsoTS"
             end
             return comboT
       end
+	  function __gsoTS:GetComboRangeTarget(range)
+            local comboT = self:GetTarget(gsoSDK.ObjectManager:GetEnemyHeroes(range + myHero.boundingRadius - 35, true, "attack"), false)
+            if comboT ~= nil then
+                  self.LastHeroTarget = comboT
+            end
+            return comboT
+      end
       function __gsoTS:GetLastHitTarget()
             local min = 10000000
             local result = nil
@@ -2015,6 +2023,30 @@ class "__gsoLoader"
             end)
       end
 
+local function Ready(slot)
+	return myHero:GetSpellData(slot).currentCd == 0
+end
+
+local function GetDistanceSqr(Pos1, Pos2)
+    local Pos2 = Pos2 or myHero.pos
+    local dx = Pos1.x - Pos2.x
+    local dz = (Pos1.z or Pos1.y) - (Pos2.z or Pos2.y)
+    return dx^2 + dz^2
+end
+
+local function GetDistance(Pos1, Pos2)
+	return math.sqrt(GetDistanceSqr(Pos1, Pos2))
+end
+
+local function GetClearMinion(range)
+    for i = 1, Game.MinionCount() do
+        local minion = Game.Minion(i)
+        if GetDistance(minion.pos) < range and not (minion.dead or minion.team == myHero.team) then
+            return minion
+        end
+    end
+end
+
 -- Udyr --
 class "__gsoUdyr"
 
@@ -2024,7 +2056,7 @@ class "__gsoUdyr"
             __gsoLoader()
             self.lastReset = 0
             gsoSDK.Orbwalker:SetSpellMoveDelays( { q = 0, w = 0, e = 0, r = 0 } )
-            gsoSDK.Orbwalker:SetSpellAttackDelays( { q = 0, w = 0, e = 0, r = 0 } )
+            gsoSDK.Orbwalker:SetSpellAttackDelays( { q = 0.09, w = 0.09, e = 0.09, r = 0.09 } )
             self:CreateMenu()
             self:AddTickEvent()
       end
@@ -2035,8 +2067,10 @@ class "__gsoUdyr"
                   gsoSDK.Menu.iqset:MenuElement({name = "Combo Settings", id = "combo", type = MENU })
 					gsoSDK.Menu.iqset.combo:MenuElement({id = "combow", name = "% Health for W usage", value = 60, min = 0, max = 100, step = 1, tooltip = "If your Health drops lower than this number, W is being used Combo Mode" })
 					gsoSDK.Menu.iqset.combo:MenuElement({id = "comboforcew", name = "% Health for W force", value = 35, min = 0, max = 100, step = 1, tooltip = "If your Health drops lower than this number, only W and E will be used Combo Mode" })
+					gsoSDK.Menu.iqset.combo:MenuElement({id = "comboitems", name = "Use Items", value = true, tooltip = "If this is set to true, all kinds of Items will be used automatically in Combo Mode" })
 				  gsoSDK.Menu.iqset:MenuElement({name = "(Jungle) Clear Settings", id = "clear", type = MENU })
 					gsoSDK.Menu.iqset.clear:MenuElement({id = "clearw", name = "% Health for W usage", value = 60, min = 0, max = 100, step = 1, tooltip = "If your Health drops lower than this number, W is being used Clear Mode" })
+					gsoSDK.Menu.iqset.clear:MenuElement({id = "clearitems", name = "Use Items", value = true, tooltip = "If this is set to true, all kinds of Items will be used automatically in Clear Mode" })
       end
       
       function __gsoUdyr:AddTickEvent()
@@ -2053,7 +2087,67 @@ class "__gsoUdyr"
         return
     end
 	--E
-	if mode == "Combo" then			  
+	if mode == "Combo" then
+		local PostAttack = myHero.attackData.state == STATE_WINDDOWN
+		local items = {}
+		for slot = ITEM_1,ITEM_6 do
+			local id = myHero:GetItemData(slot).itemID 
+			if id > 0 then
+				items[id] = slot
+			end
+		end
+		local BilgewaterCutlass = items[3144]
+		local Tiamat = items[3077]
+		local BladeoftheRuinedKing = items[3153]
+		local HextechGLP800 = items[3030]
+		local HextechGunblade = items[3146]
+		local HextechProtobelt01 = items[3152]
+		local RanduinsOmen = items[3143]
+		local RavenousHydra = items[3074]
+		local Spellbinder = items[3907]
+		local TitanicHydra = items[3748]
+		if gsoSDK.Menu.iqset.combo.comboitems:Value() then
+			local BilgewaterCutlassTarget = gsoSDK.TS:GetComboRangeTarget(550)
+			if BilgewaterCutlass and Ready(BilgewaterCutlass) and BilgewaterCutlassTarget then
+				Control.CastSpell(HKITEM[BilgewaterCutlass], BilgewaterCutlassTarget)
+			end
+			local TiamatTarget = gsoSDK.TS:GetComboRangeTarget(400)
+			if Tiamat and Ready(Tiamat) and TiamatTarget and PostAttack then
+				Control.CastSpell(HKITEM[Tiamat], TiamatTarget)
+			end
+			local BladeoftheRuinedKingTarget = gsoSDK.TS:GetComboRangeTarget(550)
+			if BladeoftheRuinedKing and Ready(BladeoftheRuinedKing) and BladeoftheRuinedKingTarget then
+				Control.CastSpell(HKITEM[BladeoftheRuinedKing], BladeoftheRuinedKingTarget)
+			end
+			local HextechGLP800Target = gsoSDK.TS:GetComboRangeTarget(700)
+			if HextechGLP800 and Ready(HextechGLP800) and HextechGLP800Target then
+				Control.CastSpell(HKITEM[HextechGLP800], HextechGLP800Target)
+			end
+			local HextechGunbladeTarget = gsoSDK.TS:GetComboRangeTarget(700)
+			if HextechGunblade and Ready(HextechGunblade) and HextechGunbladeTarget then
+				Control.CastSpell(HKITEM[HextechGunblade], HextechGunbladeTarget)
+			end
+			local HextechProtobelt01Target = gsoSDK.TS:GetComboRangeTarget(700)
+			if HextechProtobelt01 and Ready(HextechProtobelt01) and HextechProtobelt01Target then
+				Control.CastSpell(HKITEM[HextechProtobelt01], HextechProtobelt01Target)
+			end
+			local RanduinsOmenTarget = gsoSDK.TS:GetComboRangeTarget(500)
+			if RanduinsOmen and Ready(RanduinsOmen) and RanduinsOmenTarget then
+				Control.CastSpell(HKITEM[RanduinsOmen])
+			end
+			local RavenousHydraTarget = gsoSDK.TS:GetComboRangeTarget(400)
+			if RavenousHydra and Ready(RavenousHydra) and RavenousHydraTarget and PostAttack then
+				Control.CastSpell(HKITEM[RavenousHydra], RavenousHydraTarget)
+			end
+			local SpellbinderTarget = gsoSDK.TS:GetComboRangeTarget(900)
+			if Spellbinder and Ready(Spellbinder) and SpellbinderTarget then
+				Control.CastSpell(HKITEM[Spellbinder])
+			end
+			local TitanicHydraTarget = gsoSDK.TS:GetComboRangeTarget(400)
+			if TitanicHydra and Ready(TitanicHydra) and TitanicHydraTarget and PostAttack then
+				Control.CastSpell(HKITEM[TitanicHydra], TitanicHydraTarget)
+			end
+		end
 		if gsoSDK.Spell:IsReady(_E, { q = 0, w = 0, e = 0, r = 0 } ) then
 			local enemyList = gsoSDK.ObjectManager:GetEnemyHeroes(700 + myHero.boundingRadius - 35, true, "attack")
 			if not gsoSDK.TS:GetComboTarget() or (gsoSDK.TS:GetComboTarget() and not gsoSDK.Spell:HasBuff(gsoSDK.TS:GetComboTarget(), "UdyrBearStunCheck")) then
@@ -2090,6 +2184,41 @@ class "__gsoUdyr"
 		end
 	end
 	if mode == "Clear" then
+		local PostAttack = myHero.attackData.state == STATE_WINDDOWN
+		local items = {}
+		for slot = ITEM_1,ITEM_6 do
+			local id = myHero:GetItemData(slot).itemID 
+			if id > 0 then
+				items[id] = slot
+			end
+		end
+		local Tiamat = items[3077]
+		local HextechGLP800 = items[3030]
+		local HextechProtobelt01 = items[3152]
+		local RavenousHydra = items[3074]
+		local TitanicHydra = items[3748]
+		if gsoSDK.Menu.iqset.clear.clearitems:Value() then
+			local TiamatTarget = GetClearMinion(400)
+			if Tiamat and Ready(Tiamat) and TiamatTarget and PostAttack then
+				Control.CastSpell(HKITEM[Tiamat], TiamatTarget)
+			end
+			local HextechGLP800Target = GetClearMinion(700)
+			if HextechGLP800 and Ready(HextechGLP800) and HextechGLP800Target then
+				Control.CastSpell(HKITEM[HextechGLP800], HextechGLP800Target)
+			end
+			local HextechProtobelt01Target = GetClearMinion(700)
+			if HextechProtobelt01 and Ready(HextechProtobelt01) and HextechProtobelt01Target then
+				Control.CastSpell(HKITEM[HextechProtobelt01], HextechProtobelt01Target)
+			end
+			local RavenousHydraTarget = GetClearMinion(400)
+			if RavenousHydra and Ready(RavenousHydra) and RavenousHydraTarget and PostAttack then
+				Control.CastSpell(HKITEM[RavenousHydra], RavenousHydraTarget)
+			end
+			local TitanicHydraTarget = GetClearMinion(400)
+			if TitanicHydra and Ready(TitanicHydra) and TitanicHydraTarget and PostAttack then
+				Control.CastSpell(HKITEM[TitanicHydra], TitanicHydraTarget)
+			end
+		end
 		if gsoSDK.TS:GetLaneClearTarget() and gsoSDK.Spell:IsReady(_E, { q = 0, w = 0, e = 0, r = 0 } ) and not (QCount == 3 or WCount == 3) then
 			if string.find(gsoSDK.TS:GetLaneClearTarget().name:lower(), "crab")then
 				if gsoSDK.Spell:CastSpell(HK_E) then
